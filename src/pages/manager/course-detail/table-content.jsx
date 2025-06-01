@@ -1,6 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import ContentItem from './content-item'
+import { CKEditor } from '@ckeditor/ckeditor5-react';
+import { ClassicEditor, Essentials, Paragraph, Bold, Italic, Heading, Indent, IndentBlock, List, MediaEmbed, Undo, Table } from 'ckeditor5';
+import 'ckeditor5/ckeditor5.css';
 
 const TableContent = () => {
   return (
