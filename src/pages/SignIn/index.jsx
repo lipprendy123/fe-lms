@@ -1,8 +1,47 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/navbar';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signInSchema } from '../../utils/zodSchema';
+import { useMutation } from '@tanstack/react-query';
+import { postSignIn } from '../../service/authService';
+import secureLocalStorage from 'react-secure-storage';
+import { STORAGE_KEY } from '../../utils/const';
 
 const SignInPage = () => {
+
+  const {register, handleSubmit, formState: {errors}} = useForm({
+      resolver: zodResolver(signInSchema)
+    })
+
+    const {isPending, mutateAsync} = useMutation({
+      mutationFn: (data) => postSignIn(data)
+    })
+
+    const navigate = useNavigate()
+
+  const onSubmit = async (data) => {
+    try {
+      const response = await mutateAsync(data)
+
+      console.log(response);
+
+      secureLocalStorage.setItem(STORAGE_KEY, response.data)
+
+      if (response.data.role === 'manager') {
+          navigate('/manager')
+      } else {
+          navigate('/student')
+      }
+      
+    } catch (error) {
+      console.log(error);
+      
+    }
+    console.log(data);
+  }
+
   return (
     <div className="relative flex flex-col flex-1 p-[10px]">
       <div className="absolute w-[calc(100%-20px)] min-h-[calc(100vh-20px)] h-[calc(100%-20px)] bg-[#060A23] -z-10 rounded-[20px]">
@@ -31,6 +70,7 @@ const SignInPage = () => {
       </nav>
 
       <form
+        onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col w-[400px] h-fit rounded-[20px] border border-[#262A56] p-[30px] gap-[30px] bg-[#080A2A] m-auto"
       >
         <div>
@@ -52,11 +92,12 @@ const SignInPage = () => {
             type="email"
             name="email"
             id="email"
+            {...register('email')}
             placeholder="Write your email address"
             className="appearance-none outline-none !bg-transparent w-full font-semibold text-white placeholder:font-normal placeholder:text-[#6B6C7F]"
           />
         </div>
-
+         {errors.email?.message && <p className='text-red-500 text-xs -mt-5'>{errors.email?.message}</p>}
         <div>
           <div className="flex items-center gap-3 w-full rounded-full border p-[14px_20px] transition-all duration-300 focus-within:border-[#8661EE] focus-within:shadow-[-10px_-6px_10px_0_#7F33FF_inset] bg-[#070B24] border-[#24283E] shadow-[-10px_-6px_10px_0_#181A35_inset]">
             <img
@@ -68,6 +109,7 @@ const SignInPage = () => {
               type="password"
               name="password"
               id="password"
+              {...register('password')}
               placeholder="Type your secure password"
               className="appearance-none outline-none !bg-transparent w-full font-semibold text-white placeholder:font-normal placeholder:text-[#6B6C7F]"
             />
@@ -80,12 +122,14 @@ const SignInPage = () => {
               Forgot Password
             </Link>
           </div>
+           {errors.password?.message && <p className='text-red-500 text-xs -mt-5'>{errors.password?.message}</p>}
         </div>
 
         <hr className="border-[#262A56]" />
 
         <button
           type="submit"
+          disabled={isPending}
           className="w-full rounded-full border p-[14px_20px] text-center font-semibold text-white bg-[#662FFF] border-[#8661EE] shadow-[-10px_-6px_10px_0_#7F33FF_inset]"
         >
           Sign In to Manage
