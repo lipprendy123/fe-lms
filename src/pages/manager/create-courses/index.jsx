@@ -1,12 +1,51 @@
-import React from "react";
-import { Link, useLoaderData } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useLoaderData, useNavigate } from "react-router-dom";
+import { createCourseSchema } from "../../../utils/zodSchema";
+import { useMutation } from "@tanstack/react-query";
+import { createCourse } from "../../../service/courseService";
 
 const CreateCoursesPage = () => {
+  const data = useLoaderData();
 
-  const category = useLoaderData()
+  const {register, handleSubmit, formState: {errors}, setValue} = useForm({
+    resolver: zodResolver(createCourseSchema),
+    defaultValues: {
+      name: data?.course?.name,
+      tagline: data?.course?.tagline,
+      categoryId: data?.course?.category,
+      description: data?.course?.description,
+    }
+  })
 
-  console.log(category);
-  
+  const [file, setFile] = useState(null)
+  const fileRef = useRef(null)
+  const navigate = useNavigate()
+
+  const {isPending, mutateAsync} = useMutation({
+    mutationFn: (data) => createCourse(data)
+  })
+
+  const onSubmit = async (data) => {
+    console.log(data);
+    try {
+      const formData = new FormData()
+
+      formData.append('name', data.name)
+      formData.append('thumbnail', file)
+      formData.append('tagline', data.tagline)
+      formData.append('categoryId', data.categoryId)
+      formData.append('description', data.description)
+
+      await mutateAsync(formData)
+
+      navigate('/manager/courses')
+    } catch (error) {
+      console.log(error);
+      
+    }
+  }
 
   return (
     <>
@@ -15,7 +54,9 @@ const CreateCoursesPage = () => {
           <h1 className="font-extrabold text-[28px] leading-[42px]">
             New Course
           </h1>
-          <p className="text-[#838C9D] mt-[1]">Create new future htmlFor company</p>
+          <p className="text-[#838C9D] mt-[1]">
+            Create new future htmlFor company
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -27,7 +68,7 @@ const CreateCoursesPage = () => {
         </div>
       </header>
       <form
-        action="manage-course.html"
+        onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col w-[550px] rounded-[30px] p-[30px] gap-[30px] bg-[#F8FAFB]"
       >
         <div className="flex flex-col gap-[10px]">
@@ -41,14 +82,17 @@ const CreateCoursesPage = () => {
               alt="icon"
             />
             <input
+              {...register('name')}
               type="text"
-              name="title"
               id="title"
               className="appearance-none outline-none w-full py-3 font-semibold placeholder:font-normal placeholder:text-[#838C9D] !bg-transparent"
               placeholder="Write better name htmlFor your course"
-              required
+             
             />
           </div>
+          <span className="error-message text-[#FF435A]">
+            {errors?.name?.message}
+          </span>
         </div>
         <div className="relative flex flex-col gap-[10px]">
           <label htmlFor="thumbnail" className="font-semibold">
@@ -61,6 +105,7 @@ const CreateCoursesPage = () => {
             <button
               type="button"
               id="trigger-input"
+              onClick={() => fileRef?.current?.click()}
               className="absolute top-0 left-0 w-full h-full flex justify-center items-center gap-3 z-0"
             >
               <img
@@ -72,8 +117,8 @@ const CreateCoursesPage = () => {
             </button>
             <img
               id="thumbnail-preview"
-              src="/"
-              className="w-full h-full object-cover hidden"
+              src={file !== null ? URL.createObjectURL(file) : ""}
+              className={`w-full h-full object-cover ${file !== null ? 'block' : 'hidden'}`}
               alt="thumbnail"
             />
             <button
@@ -85,13 +130,23 @@ const CreateCoursesPage = () => {
             </button>
           </div>
           <input
+           {...register('thumbnail')}
             type="file"
-            name="thumbnail"
+            ref={fileRef}
+            onChange={(e) => {
+              if (e.target.files) {
+                setFile(e.target.files[0])
+                setValue('thumbnail', e.target.files[0])
+              }
+            }}
             id="thumbnail"
             accept="image/*"
             className="absolute bottom-0 left-1/4 -z-10"
-            required
+           
           />
+          <span className="error-message text-[#FF435A]">
+            {errors?.thumbnail?.message}
+          </span>
         </div>
         <div className="flex flex-col gap-[10px]">
           <label htmlFor="tagline" className="font-semibold">
@@ -104,12 +159,15 @@ const CreateCoursesPage = () => {
               alt="icon"
             />
             <input
+            {...register('tagline')}
               type="text"
-              name="tagline"
               id="tagline"
               className="appearance-none outline-none w-full py-3 font-semibold placeholder:font-normal placeholder:text-[#838C9D] !bg-transparent"
               placeholder="Write tagline htmlFor better copy"
             />
+            <span className="error-message text-[#FF435A]">
+            {errors?.tagline?.message}
+          </span>
           </div>
         </div>
         <div className="flex flex-col gap-[10px]">
@@ -123,17 +181,18 @@ const CreateCoursesPage = () => {
               alt="icon"
             />
             <select
-              name="category"
+            {...register('categoryId')}
               id="category"
               className="appearance-none outline-none w-full py-3 px-2 -mx-2 font-semibold placeholder:font-normal placeholder:text-[#838C9D] !bg-transparent"
             >
               <option value="" hidden>
                 Choose one category
               </option>
-              {category?.data?.map((item) => (
-  <option key={item._id} value={item._id}>{item.name}</option>
-))}
-
+              {data?.category?.data?.map((item) => (
+                <option key={item._id} value={item._id}>
+                  {item.name}
+                </option>
+              ))}
             </select>
             <img
               src="/assets/images/icons/arrow-down.svg"
@@ -141,6 +200,9 @@ const CreateCoursesPage = () => {
               alt="icon"
             />
           </div>
+           <span className="error-message text-[#FF435A]">
+            {errors?.categoryId?.message}
+          </span>
         </div>
         <div className="flex flex-col gap-[10px]">
           <label htmlFor="desc" className="font-semibold">
@@ -153,15 +215,15 @@ const CreateCoursesPage = () => {
               alt="icon"
             />
             <textarea
-              name="desc"
+            {...register('description')}
               id="desc"
               rows="5"
               className="appearance-none outline-none w-full font-semibold placeholder:font-normal placeholder:text-[#838C9D] !bg-transparent"
               placeholder="Explain what this course about"
             ></textarea>
           </div>
-          <span className="error-message text-[#FF435A]">
-            The description is required
+           <span className="error-message text-[#FF435A]">
+            {errors?.description?.message}
           </span>
         </div>
         <div className="flex items-center gap-[14px]">
@@ -173,6 +235,7 @@ const CreateCoursesPage = () => {
           </button>
           <button
             type="submit"
+            disabled={isPending}
             className="w-full rounded-full p-[14px_20px] font-semibold text-[#FFFFFF] bg-[#662FFF] text-nowrap"
           >
             Create Now
